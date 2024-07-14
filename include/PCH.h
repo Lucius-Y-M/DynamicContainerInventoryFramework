@@ -1,62 +1,149 @@
 #pragma once
 
-#define WIN32_LEAN_AND_MEAN
-#define NOMINMAX
+#include <new>
+void* operator new[](size_t size, const char* pName, int flags, unsigned debugFlags, const char* file, int line);
+void* operator new[](size_t size, size_t alignment, size_t alignmentOffset, const char* pName, int flags,
+	unsigned debugFlags, const char* file, int line);
 
-#include "RE/Skyrim.h"
-#include "SKSE/SKSE.h"
-
-#include <fstream>
-#include <spdlog/sinks/basic_file_sink.h>
-
-#include <ClibUtil/simpleINI.hpp>
-#include <ClibUtil/singleton.hpp>
-#include <ClibUtil/distribution.hpp>
-#include <ClibUtil/editorID.hpp>
-#include <ClibUtil/rng.hpp>
-
-#include <json/json.h>
-
-#define DLLEXPORT __declspec(dllexport)
-
-using namespace std::literals;
-using namespace clib_util::singleton;
-
-#ifdef SKYRIM_AE
-#	define OFFSET(se, ae) ae
-#	define OFFSET_3(se, ae, vr) ae
+#pragma warning(push)
+#if defined(FALLOUT4)
+#	include "F4SE/F4SE.h"
+#	include "RE/Fallout.h"
+#	define SKSE F4SE
+#	define SKSEAPI F4SEAPI
+#	define SKSEPlugin_Load F4SEPlugin_Load
+#	define SKSEPlugin_Query F4SEPlugin_Query
 #else
-#	define OFFSET(se, ae) se
-#	define OFFSET_3(se, ae, vr) se
+#	define SKSE_SUPPORT_XBYAK
+#	include "RE/Skyrim.h"
+#	include "SKSE/SKSE.h"
+#	include <xbyak/xbyak.h>
 #endif
 
-#include "Version.h"
+#ifdef NDEBUG
+#	include <spdlog/sinks/basic_file_sink.h>
+#else
+#	include <spdlog/sinks/msvc_sink.h>
+#endif
 
-#define _loggerInfo SKSE::log::info
-#define _loggerError SKSE::log::error
-#define _1_6_1170 (unsigned short)1U, (unsigned short)6U, (unsigned short)1170U, (unsigned short)0U
+#pragma warning(pop)
 
-namespace stl {
+#define WIN32_LEAN_AND_MEAN
+#include <Windows.h>
+
+using namespace std::literals;
+
+namespace stl
+{
+	using namespace SKSE::stl;
+
 	template <class T>
 	void write_thunk_call(std::uintptr_t a_src)
 	{
 		SKSE::AllocTrampoline(14);
-
 		auto& trampoline = SKSE::GetTrampoline();
 		T::func = trampoline.write_call<5>(a_src, T::thunk);
 	}
 
-    template <typename TDest, typename TSource>
-    constexpr auto write_vfunc() noexcept
-    {
-        REL::Relocation<std::uintptr_t> vtbl{ TDest::VTABLE[0] };
-        TSource::func = vtbl.write_vfunc(TSource::idx, TSource::Thunk);
-    }
+	template <class T>
+	void write_thunk_call_6(std::uintptr_t a_src)
+	{
+		SKSE::AllocTrampoline(14);
+		auto& trampoline = SKSE::GetTrampoline();
+		T::func = *(uintptr_t*)trampoline.write_call<6>(a_src, T::thunk);
+	}
 
-    template <typename T>
-    constexpr auto write_vfunc(const REL::ID variant_id) noexcept
-    {
-        REL::Relocation<std::uintptr_t> vtbl{ variant_id };
-        T::func = vtbl.write_vfunc(T::idx, T::Thunk);
-    }
+	template <class F, size_t index, class T>
+	void write_vfunc()
+	{
+		REL::Relocation<std::uintptr_t> vtbl{ F::VTABLE[index] };
+		T::func = vtbl.write_vfunc(T::size, T::thunk);
+	}
+
+	template <std::size_t idx, class T>
+	void write_vfunc(REL::VariantID id)
+	{
+		REL::Relocation<std::uintptr_t> vtbl{ id };
+		T::func = vtbl.write_vfunc(idx, T::thunk);
+	}
+
+	template <class T>
+	void write_thunk_jmp(std::uintptr_t a_src)
+	{
+		SKSE::AllocTrampoline(14);
+		auto& trampoline = SKSE::GetTrampoline();
+		T::func = trampoline.write_branch<5>(a_src, T::thunk);
+	}
+
+	template <class F, class T>
+	void write_vfunc()
+	{
+		write_vfunc<F, 0, T>();
+	}
+}
+
+namespace logger = SKSE::log;
+namespace WinAPI = SKSE::WinAPI;
+
+
+
+namespace util
+{
+
+	using SKSE::stl::report_and_fail;
+}
+
+#include "Plugin.h"
+
+#include <ClibUtil/distribution.hpp>
+#include <ClibUtil/editorID.hpp>
+#include <ClibUtil/numeric.hpp>
+#include <ClibUtil/rng.hpp>
+#include <ClibUtil/simpleINI.hpp>
+
+\
+#include <magic_enum.hpp>
+
+#include "SimpleMath.h"
+
+using uint = uint32_t;
+
+
+
+
+
+
+
+/*
+    lifted from PO3 CLib
+*/
+
+#pragma once
+
+#include <memory>
+
+namespace clib_util::singleton
+{
+	// singleton base class
+	// adapted from https://github.com/Qudix/QUI-SKSE/blob/main/src/c%2B%2B/General/Singleton.hpp
+
+    template <class T>
+	class ISingleton
+	{
+	public:
+		static T* GetSingleton()
+		{
+			static T singleton;
+			return std::addressof(singleton);
+		}
+
+	protected:
+		ISingleton() = default;
+		~ISingleton() = default;
+
+		ISingleton(const ISingleton&) = delete;
+		ISingleton(ISingleton&&) = delete;
+		ISingleton& operator=(const ISingleton&) = delete;
+		ISingleton& operator=(ISingleton&&) = delete;
+	};
 }

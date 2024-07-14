@@ -1,21 +1,20 @@
 {
-  "name": "dynamiccontainerinventoryframework",
-  "version-string": "1.0.0",
-  "description": "Dynamically replaces items in containers based on rules. Developed for C.O.I.N. for Skyrim SE.",
-  "homepage": "",
-  "license": "MIT",
+  "name": "dynamic-container-inventory-framework-ng",
+  "version-semver": "0.7.4",
+  "description": "",
+  "license": "GPL-3.0",
   "dependencies": [
-    "rsm-binary-io",
+    "fmt",
+    "directxtk",
+    "rapidcsv",
     "spdlog",
+    "xbyak",
+    "catch2",
+    "magic-enum",
+
     "clib-util",
-    "jsoncpp",
-    "xbyak"
+
+    "jsoncpp"
   ],
-  "overrides": [
-    {
-      "name": "fmt",
-      "version": "9.1.0"
-    }
-  ],
-  "builtin-baseline": "b7dba7f9aad09a56900f21cd78cfda1258e54e38"
+  "builtin-baseline": "83972272512ce4ede5fc3b2ba98f6468b179f192"
 }

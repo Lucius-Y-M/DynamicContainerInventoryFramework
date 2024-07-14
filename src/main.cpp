@@ -5,22 +5,81 @@
 #include "iniReader.h"
 #include "settings.h"
 
-void SetupLog() {
-    auto logsFolder = SKSE::log::log_directory();
-    if (!logsFolder) SKSE::stl::report_and_fail("SKSE log_directory not provided, logs disabled.");
+#define DLLEXPORT __declspec(dllexport)
 
-    auto pluginName = Version::NAME;
-    auto logFilePath = *logsFolder / std::format("{}.log", pluginName);
-    auto fileLoggerPtr = std::make_shared<spdlog::sinks::basic_file_sink_mt>(logFilePath.string(), true);
-    auto loggerPtr = std::make_shared<spdlog::logger>("log", std::move(fileLoggerPtr));
+void InitializeLog([[maybe_unused]] spdlog::level::level_enum a_level = spdlog::level::info)
+{
+#ifndef NDEBUG
+	auto sink = std::make_shared<spdlog::sinks::msvc_sink_mt>();
+#else
+	auto path = logger::log_directory();
+	if (!path) {
+		util::report_and_fail("Failed to find standard logging directory"sv);
+	}
 
-    spdlog::set_default_logger(std::move(loggerPtr));
-    spdlog::set_level(spdlog::level::info);
-    spdlog::flush_on(spdlog::level::info);
+	*path /= std::format("{}.log"sv, Plugin::NAME);
+	auto sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>(path->string(), true);
+#endif
 
-    //Pattern
-    spdlog::set_pattern("%v");
+	const auto level = a_level;
+
+	auto log = std::make_shared<spdlog::logger>("global log"s, std::move(sink));
+	log->set_level(level);
+	log->flush_on(spdlog::level::info);
+
+	spdlog::set_default_logger(std::move(log));
+	spdlog::set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%l] [%t] [%s:%#] %v");
 }
+
+
+
+
+
+extern "C" DLLEXPORT constinit auto SKSEPlugin_Version = []() noexcept {
+	SKSE::PluginVersionData v;
+	v.PluginName(Plugin::NAME.data());
+	v.PluginVersion(Plugin::VERSION);
+	v.UsesAddressLibrary(true);
+	v.HasNoStructUse();
+	return v;
+}();
+
+extern "C" DLLEXPORT bool SKSEAPI SKSEPlugin_Query(const SKSE::QueryInterface* skse, SKSE::PluginInfo* pluginInfo)
+{
+
+    if (skse->RuntimeVersion() < SKSE::RUNTIME_SSE_1_6_318) {
+
+        logger::critical("This DLL specifically does not support 1.5.97 (or earlier).");
+        logger::critical("If you are on 1.5.97, please download the backport by Fuzzles here: ");
+
+        return false;
+    }
+    else if (skse->RuntimeVersion() > SKSE::RUNTIME_SSE_1_6_678) {
+        logger::critical("This DLL specifically does not support runtimes from 1.6.1130 up.");
+        logger::critical("If you are on 1.6.1130+, you should simply use the original by Shekhinaga: ");
+
+        return false;
+    }
+
+
+
+	pluginInfo->name = SKSEPlugin_Version.pluginName;
+	pluginInfo->infoVersion = SKSE::PluginInfo::kVersion;
+	pluginInfo->version = SKSEPlugin_Version.pluginVersion;
+	return true;
+}
+
+
+
+
+
+
+
+
+
+
+
+
 
 void MessageHandler(SKSE::MessagingInterface::Message* a_message) {
     switch (a_message->type) {
@@ -36,54 +95,36 @@ void MessageHandler(SKSE::MessagingInterface::Message* a_message) {
     }
 }
 
-#ifdef SKYRIM_AE
-extern "C" DLLEXPORT constinit auto SKSEPlugin_Version = []() {
-    SKSE::PluginVersionData v;
-    v.PluginVersion({ Version::MAJOR, Version::MINOR, Version::PATCH });
-    v.PluginName(Version::NAME);
-    v.AuthorName(Version::PROJECT_AUTHOR);
-    v.UsesAddressLibrary();
-    v.UsesUpdatedStructs();
-    v.CompatibleVersions({
-        SKSE::RUNTIME_1_6_1130,
-        _1_6_1170 });
-    return v;
-    }();
-#else 
-extern "C" DLLEXPORT bool SKSEAPI SKSEPlugin_Query(const SKSE::QueryInterface * a_skse, SKSE::PluginInfo * a_info)
-{
-    a_info->infoVersion = SKSE::PluginInfo::kVersion;
-    a_info->name = "EnchantmentArtExtender";
-    a_info->version = 1;
 
-    const auto ver = a_skse->RuntimeVersion();
-    if (ver
-#	ifndef SKYRIMVR
-        < SKSE::RUNTIME_1_5_39
-#	else
-        > SKSE::RUNTIME_VR_1_4_15_1
-#	endif
-        ) {
-        SKSE::log::critical(FMT_STRING("Unsupported runtime version {}"), ver.string());
-        return false;
-    }
 
-    return true;
-}
-#endif
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 extern "C" DLLEXPORT bool SKSEAPI SKSEPlugin_Load(const SKSE::LoadInterface * a_skse) {
-    SetupLog();
-    _loggerInfo("Starting up {}.", Version::NAME);
-    _loggerInfo("Plugin Version: {}.", Version::VERSION);
-    _loggerInfo("Version build:");
 
-#ifdef SKYRIM_AE
-    _loggerInfo("    >Latest Version.");
-#else
-    _loggerInfo("    >1.5 Version. Do not report ANY issues with this version.");
-#endif
-    _loggerInfo("-------------------------------------------------------------------------------------");
+
+    InitializeLog();
+
+	logger::info("-- Loaded plugin {} {}", Plugin::NAME, Plugin::VERSION.string());
+
+    logger::info("-- Original by Shekhinaga, 1.6.640 backport by LuciusP24 --");
+    logger::info("-- An additional 1.5.97 backport is also available, by Fuzzles --");
+
+    logger::info("-------------------------------------------------------------------------------------");
     SKSE::Init(a_skse);
 
     auto messaging = SKSE::GetMessagingInterface();

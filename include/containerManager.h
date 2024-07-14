@@ -1,5 +1,8 @@
 #pragma once
 
+
+#include "PCH.h"
+
 namespace ContainerManager {
 	struct SwapRule {
 		int                              count               { 1 };

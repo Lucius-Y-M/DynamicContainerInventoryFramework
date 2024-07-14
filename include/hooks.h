@@ -1,5 +1,8 @@
 #pragma once
 
+
+#include "PCH.h"
+
 namespace Hooks {
 	struct TESObjectReference_Initialize
 	{

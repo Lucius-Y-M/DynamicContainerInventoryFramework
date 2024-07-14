@@ -1,3 +1,6 @@
+#pragma once
+
+
 #include "containerManager.h"
 #include "settings.h"
 #include "utility.h"
@@ -24,85 +27,91 @@ namespace {
 	void ReadReport(SwapData a_report) {
 		if (!a_report.hasError) return;
 
-		_loggerInfo("{} has errors:", a_report.name);
+		logger::info("{} has errors:", a_report.name);
 		if (a_report.hasBatData) {
-			_loggerInfo("Swap has bad data.");
-			_loggerInfo("");
+			logger::info("Swap has bad data.");
+			logger::info("");
 		}
 
 		if (a_report.missingName) {
-			_loggerInfo("Missing friendlyName, or field not a string.");
-			_loggerInfo("");
+			logger::info("Missing friendlyName, or field not a string.");
+			logger::info("");
 		}
 
 		if (a_report.noChanges) {
-			_loggerInfo("    Missing changes field, or field is invalid.");
-			_loggerInfo("");
+			logger::info("    Missing changes field, or field is invalid.");
+			logger::info("");
 		}
 
 		if (!a_report.badStringField.empty()) {
-			_loggerInfo("The following fields are not strings when they should be:");
+			logger::info("The following fields are not strings when they should be:");
 			for (auto it : a_report.badStringField) {
-				_loggerInfo("    >{}", it);
+				logger::info("    >{}", it);
 			}
-			_loggerInfo("");
+			logger::info("");
 		}
 
 		if (!a_report.objectNotArray.empty()) {
-			_loggerInfo("The following fields are not arrays when they should be:");
+			logger::info("The following fields are not arrays when they should be:");
 			for (auto it : a_report.objectNotArray) {
-				_loggerInfo("    >{}", it);
+				logger::info("    >{}", it);
 			}
-			_loggerInfo("");
+			logger::info("");
 		}
 
 		if (!a_report.badStringFormat.empty()) {
-			_loggerInfo("The following fields are not formatted as they should be:");
+			logger::info("The following fields are not formatted as they should be:");
 			for (auto it : a_report.badStringFormat) {
-				_loggerInfo("    >{}", it);
+				logger::info("    >{}", it);
 			}
-			_loggerInfo("");
+			logger::info("");
 		}
 
 		if (!a_report.changesError.empty()) {
-			_loggerInfo("There are no changes specified for this rule.");
-			_loggerInfo("");
+			logger::info("There are no changes specified for this rule.");
+			logger::info("");
 		}
 
 		if (!a_report.conditionsError.empty()) {
-			_loggerInfo("The condition field is unreadable, but present.");
-			_loggerInfo("");
+			logger::info("The condition field is unreadable, but present.");
+			logger::info("");
 		}
 
 		if (!a_report.conditionsBadBypassError.empty()) {
-			_loggerInfo("The unsafe container bypass field is unreadable, but present.");
-			_loggerInfo("");
+			logger::info("The unsafe container bypass field is unreadable, but present.");
+			logger::info("");
 		}
 
 		if (!a_report.conditionsVendorsError.empty()) {
-			_loggerInfo("The allow vendors field is unreadable, but present.");
-			_loggerInfo("");
+			logger::info("The allow vendors field is unreadable, but present.");
+			logger::info("");
 		}
 
 		if (!a_report.conditionsPluginTypeError.empty()) {
-			_loggerInfo("The plugins field is unreadable, but present.");
-			_loggerInfo("");
+			logger::info("The plugins field is unreadable, but present.");
+			logger::info("");
 		}
 
 		if (!a_report.missingForm.empty()) {
-			_loggerInfo("The following fields specify a form in a plugin that is loaded, but the form doesn't exist:");
+			logger::info("The following fields specify a form in a plugin that is loaded, but the form doesn't exist:");
 			for (auto it : a_report.missingForm) {
-				_loggerInfo("    >{}", it);
+				logger::info("    >{}", it);
 			}
-			_loggerInfo("");
+			logger::info("");
 		}
 
 		if (a_report.unableToOpen) {
-			_loggerInfo("Unable to open the config. Make sure the JSON is valid (no missing commas, brackets are closed...)");
-			_loggerInfo("");
+			logger::info("Unable to open the config. Make sure the JSON is valid (no missing commas, brackets are closed...)");
+			logger::info("");
 		}
 	}
 }
+
+
+
+
+#include "../dist/jsoncpp.cpp"
+
 
 namespace Settings {
 	void ReadConfig(Json::Value a_config, std::string a_reportName, SwapData* a_report) {
@@ -478,6 +487,9 @@ namespace Settings {
 			} //End of changes check
 		} //End of data loop
 	} //End of read config
+
+
+
 
 	bool ReadSettings() {
 		std::vector<std::string> configFiles = std::vector<std::string>();

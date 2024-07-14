@@ -1,4 +1,4 @@
-#include "utility.h"
+#include "../include/utility.h"
 
 namespace Utility {
 	bool IsModPresent(std::string a_modName) {
@@ -28,30 +28,38 @@ namespace Utility {
 		return response;
 	}
 
-	RE::FormID ParseFormID(const std::string& a_identifier) {
-		if (const auto splitID = clib_util::string::split(a_identifier, "|"); splitID.size() == 2) {
-			const auto  formID = clib_util::string::to_num<RE::FormID>(splitID[0], true);
-			const auto& modName = splitID[1];
-			return RE::TESDataHandler::GetSingleton()->LookupFormID(formID, modName);
+
+
+
+
+
+		RE::FormID ParseFormID(const std::string& a_identifier) {
+			if (const auto splitID = clib_util::string::split(a_identifier, "|"); splitID.size() == 2) {
+				const auto  formID = clib_util::string::to_num<RE::FormID>(splitID[0], true);
+				const auto& modName = splitID[1];
+				return RE::TESDataHandler::GetSingleton()->LookupFormID(formID, modName);
+			}
+			auto* form = RE::TESForm::LookupByEditorID(a_identifier);
+			if (form) return form->formID;
+			return static_cast<RE::FormID>(0);
 		}
-		auto* form = RE::TESForm::LookupByEditorID(a_identifier);
-		if (form) return form->formID;
-		return static_cast<RE::FormID>(0);
-	}
+
+
+
 
 	void GetParentChain(RE::BGSLocation* a_child, std::vector<RE::BGSLocation*>* a_parentArray) {
 		auto* parent = a_child->parentLoc;
 		if (!parent) return;
 
 		if (std::find(a_parentArray->begin(), a_parentArray->end(), parent) != a_parentArray->end()) {
-			_loggerError("IMPORTANT - Recursive parent locations. Consider fixing this.");
-			_loggerError("Chain:");
+			logger::error("IMPORTANT - Recursive parent locations. Consider fixing this.");
+			logger::error("Chain:");
 			for (auto* location : *a_parentArray) {
-				_loggerError("    {} ->", location->GetName());
+				logger::error("    {} ->", location->GetName());
 			}
 			return;
 		}
-		//_loggerInfo("    >{}", clib_util::editorID::get_editorID(parent));
+		//logger::info("    >{}", clib_util::editorID::get_editorID(parent));
 		a_parentArray->push_back(parent);
 		return GetParentChain(parent, a_parentArray);
 	}
@@ -71,4 +79,4 @@ namespace Utility {
 			}
 		}
 	}
-}
+};

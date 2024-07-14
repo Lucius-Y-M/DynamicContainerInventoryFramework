@@ -1,3 +1,6 @@
+#pragma once
+
+
 #include "containerCache.h"
 #include "containerManager.h"
 #include "utility.h"
@@ -153,53 +156,53 @@ namespace ContainerManager {
 			}
 		}
 
-		_loggerInfo("Registered new rule of type: {}.", ruleType == kAdd ? "Add" : ruleType == kRemove ? "Remove" : "Replace");
-		_loggerInfo("    Rule name: {}", a_rule.ruleName);
+		logger::info("Registered new rule of type: {}.", ruleType == kAdd ? "Add" : ruleType == kRemove ? "Remove" : "Replace");
+		logger::info("    Rule name: {}", a_rule.ruleName);
 		if (ruleType == kRemove && removeByKeywirds) {
-			_loggerInfo("    Forms with these keywords will be removed:");
+			logger::info("    Forms with these keywords will be removed:");
 			for (auto& keyword : a_rule.removeKeywords) {
-				_loggerInfo("        >{}", keyword);
+				logger::info("        >{}", keyword);
 			}
 		}
 		else if (ruleType == kRemove) {
-			_loggerInfo("    This form will be removed: {}", strcmp(a_rule.oldForm->GetName(), "") == 0 ?
+			logger::info("    This form will be removed: {}", strcmp(a_rule.oldForm->GetName(), "") == 0 ?
 				clib_util::editorID::get_editorID(a_rule.oldForm).empty() ? std::to_string(a_rule.oldForm->GetLocalFormID()) :
 				clib_util::editorID::get_editorID(a_rule.oldForm)
 				: a_rule.oldForm->GetName());
-			_loggerInfo("    Count: {}", a_rule.count > 0 ? std::to_string(a_rule.count) : "All");
+			logger::info("    Count: {}", a_rule.count > 0 ? std::to_string(a_rule.count) : "All");
 		}
 		else if (ruleType == kReplace && removeByKeywirds) {
-			_loggerInfo("    Forms with these keywords will be removed:");
+			logger::info("    Forms with these keywords will be removed:");
 			for (auto& keyword : a_rule.removeKeywords) {
-				_loggerInfo("        >{}", keyword);
+				logger::info("        >{}", keyword);
 			}
 
-			_loggerInfo("    And replaced by any of these:");
+			logger::info("    And replaced by any of these:");
 			for (auto* form : a_rule.newForm) {
-				_loggerInfo("        >{}", strcmp(form->GetName(), "") == 0 ?
+				logger::info("        >{}", strcmp(form->GetName(), "") == 0 ?
 					clib_util::editorID::get_editorID(form).empty() ? std::to_string(form->GetLocalFormID()) :
 					clib_util::editorID::get_editorID(form)
 					: form->GetName());
 			}
 		}
 		else if (ruleType == kReplace) {
-			_loggerInfo("    This form will be removed: {}", strcmp(a_rule.oldForm->GetName(), "") == 0 ?
+			logger::info("    This form will be removed: {}", strcmp(a_rule.oldForm->GetName(), "") == 0 ?
 				clib_util::editorID::get_editorID(a_rule.oldForm).empty() ? std::to_string(a_rule.oldForm->GetLocalFormID()) :
 				clib_util::editorID::get_editorID(a_rule.oldForm)
 				: a_rule.oldForm->GetName());
 
-			_loggerInfo("    And replaced by any of these:");
+			logger::info("    And replaced by any of these:");
 			for (auto* form : a_rule.newForm) {
-				_loggerInfo("        >{}", strcmp(form->GetName(), "") == 0 ?
+				logger::info("        >{}", strcmp(form->GetName(), "") == 0 ?
 					clib_util::editorID::get_editorID(form).empty() ? std::to_string(form->GetLocalFormID()) :
 					clib_util::editorID::get_editorID(form)
 					: form->GetName());
 			}
 		}
 		else {
-			_loggerInfo("    Any of the following forms may be added, with a count of {}:", a_rule.count > 1 ? a_rule.count : 1);
+			logger::info("    Any of the following forms may be added, with a count of {}:", a_rule.count > 1 ? a_rule.count : 1);
 			for (auto* form : a_rule.newForm) {
-				_loggerInfo("        >{}", strcmp(form->GetName(), "") == 0 ?
+				logger::info("        >{}", strcmp(form->GetName(), "") == 0 ?
 					clib_util::editorID::get_editorID(form).empty() ? std::to_string(form->GetLocalFormID()) :
 					clib_util::editorID::get_editorID(form)
 					: form->GetName());
@@ -207,60 +210,60 @@ namespace ContainerManager {
 		}
 
 		if (a_rule.bypassSafeEdits) {
-			_loggerInfo("");
-			_loggerInfo("    This rule can distribute to safe containers.");
+			logger::info("");
+			logger::info("    This rule can distribute to safe containers.");
 		}
 
 		if (a_rule.allowVendors) {
-			_loggerInfo("");
-			_loggerInfo("    This rule can distribute to vendor containers.");
+			logger::info("");
+			logger::info("    This rule can distribute to vendor containers.");
 		}
 
 		if (!a_rule.container.empty()) {
-			_loggerInfo("");
-			_loggerInfo("    This rule will only apply to these containers:");
+			logger::info("");
+			logger::info("    This rule will only apply to these containers:");
 			for (auto* it : a_rule.container) {
-				_loggerInfo("        >{}", strcmp(it->GetName(), "") == 0 ?
+				logger::info("        >{}", strcmp(it->GetName(), "") == 0 ?
 					clib_util::editorID::get_editorID(it).empty() ? std::to_string(it->GetLocalFormID()) :
 					clib_util::editorID::get_editorID(it)
 					: it->GetName());
 			}
 		}
 		if (!a_rule.validLocations.empty()) {
-			_loggerInfo("");
-			_loggerInfo("    This rule will only apply to these locations:");
+			logger::info("");
+			logger::info("    This rule will only apply to these locations:");
 			for (auto* it : a_rule.validLocations) {
-				_loggerInfo("        >{}", strcmp(it->GetName(), "") == 0 ?
+				logger::info("        >{}", strcmp(it->GetName(), "") == 0 ?
 					clib_util::editorID::get_editorID(it).empty() ? std::to_string(it->GetLocalFormID()) :
 					clib_util::editorID::get_editorID(it)
 					: it->GetName());
 			}
 		}
 		if (!a_rule.validWorldspaces.empty()) {
-			_loggerInfo("");
-			_loggerInfo("    This rule will only apply to these worldspaces:");
+			logger::info("");
+			logger::info("    This rule will only apply to these worldspaces:");
 			for (auto* it : a_rule.validWorldspaces) {
-				_loggerInfo("        >{}", strcmp(it->GetName(), "") == 0 ?
+				logger::info("        >{}", strcmp(it->GetName(), "") == 0 ?
 					clib_util::editorID::get_editorID(it).empty() ? std::to_string(it->GetLocalFormID()) :
 					clib_util::editorID::get_editorID(it)
 					: it->GetName());
 			}
 		}
 		if (!a_rule.locationKeywords.empty()) {
-			_loggerInfo("");
-			_loggerInfo("    This rule will only apply to locations with these keywords:");
+			logger::info("");
+			logger::info("    This rule will only apply to locations with these keywords:");
 			for (auto& it : a_rule.locationKeywords) {
-				_loggerInfo("        >{}", it);
+				logger::info("        >{}", it);
 			}
 		}
 		if (!a_rule.references.empty()) {
-			_loggerInfo("");
-			_loggerInfo("    This rule will only apply to these references:");
+			logger::info("");
+			logger::info("    This rule will only apply to these references:");
 			for (auto reference : a_rule.references) {
-				_loggerInfo("        >{}", reference);
+				logger::info("        >{}", reference);
 			}
 		}
-		_loggerInfo("-------------------------------------------------------------------------------------");
+		logger::info("-------------------------------------------------------------------------------------");
 	}
 
 	void ContainerManager::HandleContainer(RE::TESObjectREFR* a_ref) {
@@ -290,7 +293,7 @@ namespace ContainerManager {
 
 				a_ref->RemoveItem(rule.oldForm, itemCount, RE::ITEM_REMOVE_REASON::kRemove, nullptr, nullptr);
 				for (; itemCount > 0;) {
-					size_t rng = clib_util::RNG().generate<size_t>(0, rule.newForm.size() - 1);
+					size_t rng = clib_util::RNG().Generate<size_t>(0, rule.newForm.size() - 1);
 					RE::TESBoundObject* thingToAdd = rule.newForm.at(rng);
 					if (thingToAdd->As<RE::TESLeveledList>()) {
 						AddLeveledListToContainer(thingToAdd->As<RE::TESLeveledList>(), a_ref);
@@ -318,7 +321,7 @@ namespace ContainerManager {
 				}
 
 				for (uint32_t i = 0; i < itemCount; ++i) {
-					size_t rng = clib_util::RNG().generate<size_t>(0, rule.newForm.size() - 1);
+					size_t rng = clib_util::RNG().Generate<size_t>(0, rule.newForm.size() - 1);
 					RE::TESBoundObject* thingToAdd = rule.newForm.at(rng);
 					auto* leveledThing = thingToAdd->As<RE::TESLeveledList>();
 					if (leveledThing) {
@@ -375,7 +378,7 @@ namespace ContainerManager {
 			}
 
 			for (; ruleCount > 0;) {
-				size_t rng = clib_util::RNG().generate<size_t>(0, rule.newForm.size() - 1);
+				size_t rng = clib_util::RNG().Generate<size_t>(0, rule.newForm.size() - 1);
 				RE::TESBoundObject* thingToAdd = rule.newForm.at(rng);
 				auto* leveledThing = thingToAdd->As<RE::TESLeveledList>();
 
@@ -398,8 +401,8 @@ namespace ContainerManager {
 			if (!parentLocation) continue;
 
 			parents.push_back(parentLocation);
-			//_loggerInfo("Location: {} - Parents:", clib_util::editorID::get_editorID(location));
-			//_loggerInfo("    >{}", clib_util::editorID::get_editorID(parentLocation));
+			//logger::info("Location: {} - Parents:", clib_util::editorID::get_editorID(location));
+			//logger::info("    >{}", clib_util::editorID::get_editorID(parentLocation));
 			Utility::GetParentChain(parentLocation, &parents);
 			this->parentLocations[location] = parents;
 		}
