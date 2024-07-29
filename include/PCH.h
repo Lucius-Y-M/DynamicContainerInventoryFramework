@@ -42,14 +42,6 @@ using namespace std::literals;
 #define _loggerError logger::error
 
 
-
-
-
-
-
-
-
-
 namespace stl
 {
 	using namespace SKSE::stl;

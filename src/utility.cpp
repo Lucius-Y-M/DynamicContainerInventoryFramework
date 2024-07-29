@@ -1,4 +1,4 @@
-#include "../include/utility.h"
+#include "utility.h"
 
 namespace Utility {
 	bool IsModPresent(std::string a_modName) {
