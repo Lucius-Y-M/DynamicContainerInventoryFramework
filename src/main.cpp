@@ -1,9 +1,18 @@
+#pragma once
+
+
 #include <spdlog/sinks/basic_file_sink.h>
-#include "containerCache.h"
+// #include "containerCache.h"
+
+
+
+
 #include "containerManager.h"
 #include "hooks.h"
 #include "iniReader.h"
+#include "merchantFactionCache.h"
 #include "settings.h"
+
 
 #define DLLEXPORT __declspec(dllexport)
 
@@ -84,7 +93,8 @@ extern "C" DLLEXPORT bool SKSEAPI SKSEPlugin_Query(const SKSE::QueryInterface* s
 void MessageHandler(SKSE::MessagingInterface::Message* a_message) {
     switch (a_message->type) {
     case SKSE::MessagingInterface::kDataLoaded:
-        ContainerCache::CachedData::GetSingleton()->BuildCache();
+
+        MerchantCache::MerchantCache::GetSingleton()->BuildCache();
         ContainerManager::ContainerManager::GetSingleton()->InitializeData();
         Hooks::Install();
         Settings::ReadSettings();
@@ -117,7 +127,12 @@ void MessageHandler(SKSE::MessagingInterface::Message* a_message) {
 extern "C" DLLEXPORT bool SKSEAPI SKSEPlugin_Load(const SKSE::LoadInterface * a_skse) {
 
 
-    InitializeLog();
+    InitializeLog(
+        /*
+            TODO: remove before release
+        */
+        //    spdlog::level::debug
+    );
 
 	logger::info("-- Loaded plugin {} {}", Plugin::NAME, Plugin::VERSION.string());
 

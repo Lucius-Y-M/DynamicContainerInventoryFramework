@@ -1,6 +1,3 @@
-#pragma once
-
-
 #include "containerManager.h"
 #include "settings.h"
 #include "utility.h"
@@ -22,6 +19,14 @@ namespace {
 		std::vector<std::string> missingForm;
 		std::vector<std::string> objectNotArray;
 		std::vector<std::string> badStringFormat;
+
+
+		/* added: report for bool & int values */
+		std::vector<std::string> conditionsNotAnIntegerError;
+		std::vector<std::string> conditionsNotABoolError;
+		/* end of add */
+
+
 	};
 
 	void ReadReport(SwapData a_report) {
@@ -104,14 +109,44 @@ namespace {
 			logger::info("Unable to open the config. Make sure the JSON is valid (no missing commas, brackets are closed...)");
 			logger::info("");
 		}
+
+
+
+
+
+
+
+
+
+
+
+
+		/* added: for int & bool */
+
+		if (!a_report.conditionsNotABoolError.empty()) {
+			logger::info("The following should have boolean values (true or false), but do not:");
+			for (auto it : a_report.conditionsNotABoolError) {
+				logger::info("    >{}", it);
+			}
+			logger::info("");
+		}
+
+		if (!a_report.conditionsNotAnIntegerError.empty()) {
+			logger::info("The following should have integer values, but do not:");
+			for (auto it : a_report.conditionsNotAnIntegerError) {
+				logger::info("    >{}", it);
+			}
+			logger::info("");
+		}
+
+
+		/* end of add */
+
 	}
 }
 
 
-
-
 #include "../dist/jsoncpp.cpp"
-
 
 namespace Settings {
 	void ReadConfig(Json::Value a_config, std::string a_reportName, SwapData* a_report) {
@@ -141,6 +176,12 @@ namespace Settings {
 			std::vector<RE::TESWorldSpace*> validWorldspaceIdentifiers{};
 			std::vector<RE::TESObjectCONT*> validContainers{};
 			std::vector<RE::FormID> validReferences{};
+			std::vector<std::pair<RE::ActorValue, std::pair<float, float>>> requiredAVs{};
+			std::vector<std::pair<RE::TESGlobal*, float>> requiredGlobals{};
+
+			/* added: quest stage */
+			std::vector<QuestCondition> requiredQuestStages{};
+			/* end of add*/
 
 			//Missing name check. Missing name is used in the back end for rule checking.
 			if (!friendlyName || !friendlyName.isString()) {
@@ -377,6 +418,284 @@ namespace Settings {
 						validReferences.push_back(Utility::ParseFormID(identifier.asString()));
 					}
 				}
+
+
+
+
+
+
+
+
+
+				/* added: quest condition */
+
+
+					//quest stage check
+					auto& questStageField = conditions["questConditions"];
+					if (questStageField && questStageField.isArray()) {
+
+
+
+						for (auto & identifier : questStageField) {
+
+							// parse: quest, stage, comparator
+
+							// ************ quest
+							auto questString = identifier["quest"];
+							if (!questString.isString()) {
+								std::string name = friendlyNameString; name += " -> questConditions";
+								a_report->badStringField.push_back(name);
+								a_report->hasError = true;
+								conditionsAreValid = false;
+								continue;
+							}
+
+
+
+							RE::FormID questFormID = Utility::ParseFormID(questString.asString());
+
+							auto questForm = RE::TESForm::LookupByID<RE::TESQuest>(questFormID);
+							if (!questForm) {
+								std::string name = friendlyNameString; name += " -> questConditions";
+								a_report->missingForm.push_back(name);
+								a_report->hasError = true;
+								conditionsAreValid = false;
+								continue;
+							}
+
+
+
+							// ************ stage
+
+
+							auto stageUInt = identifier["stage"];
+
+							// NOTE: since RE::TESQuest stage number is u16, its max val is 65535, cannot be more than that
+							if (!stageUInt.isUInt() || stageUInt.asUInt() > 65535) {
+								std::string name = friendlyNameString; name += " -> questConditions";
+								a_report->conditionsNotAnIntegerError.push_back(name);
+								a_report->hasError = true;
+								conditionsAreValid = false;
+								continue;
+							}
+							uint16_t wantedStage = (uint16_t) stageUInt.asUInt();
+
+
+							// ************ comparator
+
+							auto comparatorString = identifier["comparator"];
+							if (!comparatorString.isString()) {
+								std::string name = friendlyNameString; name += " -> questConditions";
+								a_report->badStringField.push_back(name);
+								a_report->hasError = true;
+								conditionsAreValid = false;
+								continue;
+							}
+							auto comparator = Comparison::ParseOperator(comparatorString.asString());
+							if (comparator == Comparison::CompareOp::kUndefined) {
+								std::string name = friendlyNameString; name += " -> questConditions";
+								a_report->badStringFormat.push_back(name);
+								a_report->hasError = true;
+								conditionsAreValid = false;
+								continue;
+							}
+							
+							
+							// reaching here, this quest condition is valid, add.
+
+							requiredQuestStages.push_back(
+								std::make_pair(
+									questForm,
+									std::make_pair(wantedStage, comparator)
+								)
+							);
+						}
+
+					}
+
+
+
+				/* end of add */
+
+
+
+
+				//Player skill check.
+				auto& playerSkillsField = conditions["playerSkills"];
+				if (playerSkillsField) {
+					if (!playerSkillsField.isArray()) {
+						std::string name = friendlyNameString; name += " -> playerSkills";
+						a_report->objectNotArray.push_back(name);
+						a_report->hasError = true;
+						conditionsAreValid = false;
+						continue;
+					}
+
+					for (auto& identifier : playerSkillsField) {
+						if (!identifier.isString()) {
+							std::string name = friendlyNameString; name += " -> playerSkills";
+							a_report->badStringField.push_back(name);
+							a_report->hasError = true;
+							conditionsAreValid = false;
+							continue;
+						}
+
+						auto components = clib_util::string::split(identifier.asString(), "|"sv);
+						if (components.size() != 2 && components.size() != 3) {
+							std::string name = friendlyNameString; name += " -> playerSkills -> "; name += identifier.asString();
+							a_report->badStringFormat.push_back(name);
+							a_report->hasError = true;
+							conditionsAreValid = false;
+							continue;
+						}
+
+						//Format is: 1 Skill, 2 min level, 3 (optional) max level. Valid skills are HARDCODED skill values, such as conjuration and one-handed.
+						auto skillName = clib_util::string::tolower(components.at(0));
+						auto skillLevelMin = components.at(1);
+						std::string skillLevelMax = "";
+						if (components.size() == 3) skillLevelMax = components.at(2);
+
+						float skillNumLevel = -1.0f;
+						float skillNumLevelMax = -1.0f;
+						try {
+							skillNumLevel = std::stof(skillLevelMin);
+						}
+						catch (std::exception e) {
+							logger::error("Exception {} caught while reading config: {} -> playerSkills. Make sure everything is formatted correctly.", e.what(), friendlyNameString);
+							continue;
+						}
+
+						if (!skillLevelMax.empty()) {
+							try {
+								skillNumLevelMax = std::stof(skillLevelMax);
+							}
+							catch (std::exception e) {
+								logger::error("Exception {} caught while reading config: {} -> playerSkills. Make sure everything is formatted correctly.", e.what(), friendlyNameString);
+								continue;
+							}
+						}
+
+						auto requiredAV = RE::ActorValue::kAggression;
+						if (skillName == "illusion") {
+							requiredAV = RE::ActorValue::kIllusion;
+						}
+						else if (skillName == "conjuration") {
+							requiredAV = RE::ActorValue::kConjuration;
+						}
+						else if (skillName == "destruction") {
+							requiredAV = RE::ActorValue::kDestruction;
+						}
+						else if (skillName == "restoration") {
+							requiredAV = RE::ActorValue::kRestoration;
+						}
+						else if (skillName == "alteration") {
+							requiredAV = RE::ActorValue::kAlteration;
+						}
+						else if (skillName == "enchanting") {
+							requiredAV = RE::ActorValue::kEnchanting;
+						}
+						else if (skillName == "smithing") {
+							requiredAV = RE::ActorValue::kSmithing;
+						}
+						else if (skillName == "heavyarmor") {
+							requiredAV = RE::ActorValue::kHeavyArmor;
+						}
+						else if (skillName == "block") {
+							requiredAV = RE::ActorValue::kBlock;
+						}
+						else if (skillName == "twohanded") {
+							requiredAV = RE::ActorValue::kTwoHanded;
+						}
+						else if (skillName == "onehanded") {
+							requiredAV = RE::ActorValue::kOneHanded;
+						}
+						else if (skillName == "marksman") {
+							requiredAV = RE::ActorValue::kArchery;
+						}
+						else if (skillName == "lightarmor") {
+							requiredAV = RE::ActorValue::kLightArmor;
+						}
+						else if (skillName == "sneak") {
+							requiredAV = RE::ActorValue::kSneak;
+						}
+						else if (skillName == "speechcraft") {
+							requiredAV = RE::ActorValue::kSpeech;
+						}
+						else if (skillName == "lockpicking") {
+							requiredAV = RE::ActorValue::kLockpicking;
+						}
+						else if (skillName == "pickpocket") {
+							requiredAV = RE::ActorValue::kPickpocket;
+						}
+						else if (skillName == "alchemy") {
+							requiredAV = RE::ActorValue::kAlchemy;
+						}
+
+						if (requiredAV == RE::ActorValue::kAggression) {
+							std::string name = friendlyNameString; name += " -> playerSkills -> "; name += identifier.asString();
+							a_report->missingForm.push_back(name);
+							continue;
+						}
+						auto floatPair = std::make_pair(skillNumLevel, skillNumLevelMax);
+						auto newPair = std::make_pair(requiredAV, floatPair);
+						requiredAVs.push_back(newPair);
+					}
+				}
+
+				//Global check. Note: has optimization that can be done. Check at the end.
+				auto& globalsField = conditions["globals"];
+				if (globalsField) {
+					if (!globalsField.isArray()) {
+						std::string name = friendlyNameString; name += " -> globals";
+						a_report->objectNotArray.push_back(name);
+						a_report->hasError = true;
+						conditionsAreValid = false;
+						continue;
+					}
+
+					for (auto& identifier : globalsField) {
+						if (!identifier.isString()) {
+							std::string name = friendlyNameString; name += " -> globals";
+							a_report->badStringField.push_back(name);
+							a_report->hasError = true;
+							conditionsAreValid = false;
+							continue;
+						}
+
+						auto components = clib_util::string::split(identifier.asString(), "|"sv);
+						if (components.size() != 2) {
+							std::string name = friendlyNameString; name += " -> globals -> "; name += identifier.asString();
+							a_report->badStringFormat.push_back(name);
+							a_report->hasError = true;
+							conditionsAreValid = false;
+							continue;
+						}
+
+						//Format is: 1 Global EDID, 2 Rerquired val (float). This will FLOOR the value if the global needs a long/short.
+						auto globalName = clib_util::string::tolower(components.at(0));
+						auto globalValueStr = components.at(1);
+						float globalValueFloat = -1.0f;
+
+						try {
+							globalValueFloat = std::stof(globalValueStr) / 1.0f;
+						}
+						catch (std::exception e) {
+							logger::error("Exception {} caught while reading config: {} -> globals. Make sure everything is formatted correctly.", e.what(), friendlyNameString);
+							continue;
+						}
+
+						auto* requiredGlobal = RE::TESForm::LookupByEditorID<RE::TESGlobal>(globalName);
+						if (!requiredGlobal) {
+							std::string name = friendlyNameString; name += " -> globals -> "; name += globalName;
+							a_report->missingForm.push_back(name);
+							continue;
+						}
+						
+						//Potential optimization: Constant form flag evaluated HERE, not in container manager. How do I get constant flag?
+						auto newPair = std::make_pair(requiredGlobal, globalValueFloat);
+						requiredGlobals.push_back(newPair);
+					}
+				}
 			} //End of conditions check
 			if (!conditionsAreValid) continue;
 
@@ -391,12 +710,29 @@ namespace Settings {
 				newRule.container = validContainers;
 				newRule.references = validReferences;
 				newRule.ruleName = ruleName;
+				newRule.requiredAVs = requiredAVs;
+				newRule.requiredGlobalValues = requiredGlobals;
+
+				/* added: */
+
+				newRule.requiredQuestStages = requiredQuestStages;
+
+				/* end of add */
+
 				bool changesAreValid = true;
 
 				auto& oldId = change["remove"];
 				auto& newId = change["add"];
+
+				/* added: pickAtRandom */
+				auto& pickAtRandomField = change["randomAdd"];
+				/* end of add */
+
 				auto& countField = change["count"];
 				auto& removeKeywords = change["removeByKeywords"];
+
+
+
 				if (!(oldId || newId || removeKeywords)) {
 					a_report->hasBatData = true;
 					a_report->changesError = friendlyNameString;
@@ -405,6 +741,7 @@ namespace Settings {
 				}
 
 				if (oldId) {
+
 					if (!oldId.isString()) {
 						std::string name = friendlyNameString; name += " -> remove";
 						a_report->badStringField.push_back(name);
@@ -421,6 +758,46 @@ namespace Settings {
 					auto* parsedForm = RE::TESForm::LookupByID<RE::TESBoundObject>(parsedFormID);
 					if (!parsedForm) continue;
 					newRule.oldForm = parsedForm;
+
+					// if (oldId.isString()) {
+					// 	auto parsedFormID = Utility::ParseFormID(oldId.asString());
+					// 	if (parsedFormID == 0) {
+					// 		continue;
+					// 	}
+
+					// 	auto* parsedForm = RE::TESForm::LookupByID<RE::TESBoundObject>(parsedFormID);
+					// 	if (!parsedForm) continue;
+					// 	newRule.oldForm.push_back(parsedForm);
+					// }
+
+					// else if (oldId.isArray()) {
+					// 	for (auto& removal : oldId) {
+					// 		if (!removal.isString()) {
+					// 			std::string name = friendlyNameString; name += " -> remove";
+					// 			a_report->badStringField.push_back(name);
+					// 			a_report->hasError = true;
+					// 			changesAreValid = false;
+					// 			continue;
+					// 		}
+
+					// 		auto parsedFormID = Utility::ParseFormID(removal.asString());
+					// 		if (parsedFormID == 0) {
+					// 			continue;
+					// 		}
+
+					// 		auto* parsedForm = RE::TESForm::LookupByID<RE::TESBoundObject>(parsedFormID);
+					// 		if (!parsedForm) continue;
+					// 		newRule.oldForm.push_back(parsedForm);
+					// 	}
+					// }
+
+					// else {
+					// 	std::string name = friendlyNameString; name += " -> remove";
+					// 	a_report->badStringField.push_back(name);
+					// 	a_report->hasError = true;
+					// 	changesAreValid = false;
+					// 	continue;
+					// }
 				} //Old object check.
 
 				if (newId) {
@@ -476,9 +853,81 @@ namespace Settings {
 				}
 				if (!changesAreValid) continue;
 
+
+
+
+
+
+
+
+
+
+
+
+				/* added: is pick at random */
+					if (pickAtRandomField && pickAtRandomField.isBool()) {
+						newRule.isPickAtRandom = pickAtRandomField.asBool();
+					}
+
+				/* end of add */
+
+
+
+
+
+
+
+
+
+
 				if (countField && countField.isInt()) {
 					newRule.count = countField.asInt();
 				}
+
+
+
+
+					/* PROPOSAL : "count" can also be an array of size 2, if so, a number in between is picked */
+					// else if (countField && countField.isArray() && countField.size() == 2) {
+
+					// 	if (countField[0].isUInt() && countField[1].isUInt()) {
+					// 		int
+					// 			min = (int) countField[0].asUInt(),
+					// 			max = (int) countField[1].asUInt();
+
+					// 		if (min == max) {
+					// 			newRule.count = min;
+					// 		}
+
+					// 		else {
+					// 			if (min > max) {
+					// 				std::swap(min, max);
+					// 			}
+					// 			int rng = clib_util::RNG().Generate(min, max);
+					// 			newRule.count = rng;
+					// 		}
+
+							
+					// 	}
+
+					// 	else {
+					// 		std::string name = friendlyNameString; name += " -> count";
+					// 		a_report->badStringFormat.push_back(name);
+					// 		a_report->hasError = true;
+					// 		changesAreValid = false;
+					// 		continue;
+					// 	}
+					// }
+					/* end of PROPOSAL */
+
+
+
+
+
+
+
+
+
 				else {
 					newRule.count = -1;
 				}
@@ -487,9 +936,6 @@ namespace Settings {
 			} //End of changes check
 		} //End of data loop
 	} //End of read config
-
-
-
 
 	bool ReadSettings() {
 		std::vector<std::string> configFiles = std::vector<std::string>();

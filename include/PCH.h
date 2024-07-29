@@ -118,8 +118,6 @@ using uint = uint32_t;
     lifted from PO3 CLib
 */
 
-#pragma once
-
 #include <memory>
 
 namespace clib_util::singleton

@@ -14,16 +14,6 @@
 using FID = u32; // RE::FormID = uint32_t
 
 
-// using BoundObjPtr = RE::TESBoundObject *;
-// using NPCPtr = RE::TESNPC *;
-// using KeywordPtr = RE::BGSKeyword *;
-// using SpellPtr = RE::SpellItem *;
-// using MGEFPtr = RE::ActiveEffect *;
-// using BookPtr = RE::TESObjectBOOK *;
-
-// using GlobVarPtr = RE::TESGlobal *;
-// using FormListPtr = RE::BGSListForm *;
-
 using BoundObj = RE::TESBoundObject;
 using NPC = RE::TESNPC;
 using Keyword = RE::BGSKeyword;

@@ -1,14 +1,13 @@
 #pragma once
 
-
-#include "containerCache.h"
 #include "containerManager.h"
+#include "merchantFactionCache.h"
 #include "utility.h"
 
 namespace {
-	static void AddLeveledListToContainer(RE::TESLeveledList* list, RE::TESObjectREFR* a_container) {
+	static void AddLeveledListToContainer(RE::TESLeveledList* list, RE::TESObjectREFR* a_container, uint32_t a_count) {
 		RE::BSScrapArray<RE::CALCED_OBJECT> result{};
-		Utility::ResolveLeveledList(list, &result);
+		Utility::ResolveLeveledList(list, &result, a_count);
 		if (result.size() < 1) return;
 
 		for (auto& obj : result) {
@@ -21,6 +20,93 @@ namespace {
 
 namespace ContainerManager {
 	bool ContainerManager::IsRuleValid(SwapRule* a_rule, RE::TESObjectREFR* a_ref) {
+		//Reference check.
+		bool hasReferenceMatch = a_rule->references.empty() ? true : false;
+		if (!hasReferenceMatch) {
+			std::stringstream stream;
+			stream << std::hex << a_ref->formID;
+			if (std::find(a_rule->references.begin(), a_rule->references.end(), a_ref->formID) != a_rule->references.end()) {
+				hasReferenceMatch = true;
+			}
+		}
+		if (!hasReferenceMatch) return false;
+
+		//Container check.
+		bool hasContainerMatch = a_rule->container.empty() ? true : false;
+		auto* refBaseContainer = a_ref->GetBaseObject()->As<RE::TESObjectCONT>();
+		if (!hasContainerMatch && refBaseContainer) {
+			for (auto it = a_rule->container.begin(); it != a_rule->container.end() && !hasContainerMatch; ++it) {
+				if (refBaseContainer == *it) hasContainerMatch = true;
+			}
+		}
+		if (!hasContainerMatch) return false;
+
+		bool hasAVMatch = a_rule->requiredAVs.empty() ? true : false;
+		if (!hasAVMatch) {
+			auto* player = RE::PlayerCharacter::GetSingleton();
+			bool hasFullMatch = false;
+
+			for (auto it = a_rule->requiredAVs.begin(); it != a_rule->requiredAVs.end() && !hasAVMatch; ++it) {
+				auto& valueSet = *it;
+				if (player->AsActorValueOwner()->GetActorValue(valueSet.first) >= valueSet.second.first) {
+					hasFullMatch = true;
+				}
+				if (hasFullMatch && valueSet.second.second > -1.0f) {
+					if (player->AsActorValueOwner()->GetActorValue(valueSet.first) > valueSet.second.second) {
+						hasFullMatch = false;
+					}
+				}
+				hasAVMatch = hasFullMatch;
+			}
+		}
+		if (!hasAVMatch) return false;
+
+
+
+
+
+		/* added: quest check  */
+
+		bool hasQuestStageMatch = a_rule->requiredQuestStages.empty() ? true : false;
+		if (!hasQuestStageMatch) {
+			for (auto & it : a_rule->requiredQuestStages) {
+
+				auto & [wantedStage, comparator] = it.second;				
+
+				if (Comparison::CompareResult(it.first->currentStage, comparator, wantedStage)) {					
+
+					hasQuestStageMatch = true;
+					break;
+				}
+			}			
+		}
+		if (hasQuestStageMatch == false) return false;
+
+		/* end of add */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+		//We can get lazy here, since this is the last condition.
+		bool hasGlobalMatch = a_rule->requiredGlobalValues.empty() ? true : false;
+		if (!hasGlobalMatch) {
+			for (auto it = a_rule->requiredGlobalValues.begin(); it != a_rule->requiredGlobalValues.end() && !hasGlobalMatch; ++it) {
+				if ((*it).first->value == (*it).second) hasGlobalMatch = true;
+			}
+		}
+		if (!hasGlobalMatch) return false;
+
 		auto* refLoc = a_ref->GetCurrentLocation();
 		auto* refWorldspace = a_ref->GetWorldspace();
 
@@ -31,9 +117,10 @@ namespace ContainerManager {
 			}
 		}
 
+		//The following are SLOW because they have a lot to check.
+		//Thus, they are moved to the end of the validation to give the first a chance to fail early.
 		//Parent Location check. If the current location is NOT a match, this finds its parents.
 		bool hasParentLocation = a_rule->validLocations.empty() ? true : false;
-
 		if (!hasParentLocation && refLoc) {
 			if (std::find(a_rule->validLocations.begin(), a_rule->validLocations.end(), refLoc) != a_rule->validLocations.end()) {
 				hasParentLocation = true;
@@ -73,7 +160,7 @@ namespace ContainerManager {
 				}
 			}
 		}
-		
+		if (!hasWorldspaceLocation) return false;
 
 		//Location keyword search. If these do not exist, check the parents..
 		bool hasLocationKeywordMatch = a_rule->locationKeywords.empty() ? true : false;
@@ -81,6 +168,13 @@ namespace ContainerManager {
 			for (auto& locationKeyword : a_rule->locationKeywords) {
 				if (refLoc->HasKeywordString(locationKeyword)) {
 					hasLocationKeywordMatch = true;
+
+
+					/* added: small optimization: since one valid = condition valid, no need to check rest */
+
+					break;
+
+					/* end of add */
 				}
 			}
 
@@ -93,33 +187,20 @@ namespace ContainerManager {
 					for (auto& locationKeyword : a_rule->locationKeywords) {
 						if ((*it)->HasKeywordString(locationKeyword)) {
 							hasLocationKeywordMatch = true;
+
+							/* added: small optimization: since one valid = condition valid, no need to check rest */
+
+							break;
+
+							/* end of add */
 						}
 					}
 				}
 			}
 		}
+		if (!hasLocationKeywordMatch) return false;
 
-		//Reference check.
-		bool hasReferenceMatch = a_rule->references.empty() ? true : false;
-		if (!hasReferenceMatch) {
-			std::stringstream stream;
-			stream << std::hex << a_ref->formID;
-			if (std::find(a_rule->references.begin(), a_rule->references.end(), a_ref->formID) != a_rule->references.end()) {
-				hasReferenceMatch = true;
-			}
-		}
-
-		//Container check.
-		bool hasContainerMatch = a_rule->container.empty() ? true : false;
-		auto* refBaseContainer = a_ref->GetBaseObject()->As<RE::TESObjectCONT>();
-		if (!hasContainerMatch && refBaseContainer) {
-			for (auto& container : a_rule->container) {
-				if (refBaseContainer == container) {
-					hasContainerMatch = true;
-				}
-			}
-		}
-		return (hasReferenceMatch && hasLocationKeywordMatch && hasParentLocation && hasContainerMatch && hasWorldspaceLocation);
+		return true;
 	}
 
 	void ContainerManager::CreateSwapRule(SwapRule a_rule) {
@@ -200,13 +281,27 @@ namespace ContainerManager {
 			}
 		}
 		else {
-			logger::info("    Any of the following forms may be added, with a count of {}:", a_rule.count > 1 ? a_rule.count : 1);
+
+			/* added & changed: depending on "pickAtRandom" setting, different message is displayed */
+
+			if (a_rule.isPickAtRandom) {
+				logger::info("    One of the following forms will be added, with a count of {}:", a_rule.count > 1 ? a_rule.count : 1);
+			}
+			else {
+				logger::info("    All of the following forms will be added, with a count of {}:", a_rule.count > 1 ? a_rule.count : 1);
+			}
+
+
 			for (auto* form : a_rule.newForm) {
 				logger::info("        >{}", strcmp(form->GetName(), "") == 0 ?
 					clib_util::editorID::get_editorID(form).empty() ? std::to_string(form->GetLocalFormID()) :
 					clib_util::editorID::get_editorID(form)
 					: form->GetName());
 			}
+
+
+			/* end of add & change */
+
 		}
 
 		if (a_rule.bypassSafeEdits) {
@@ -263,14 +358,121 @@ namespace ContainerManager {
 				logger::info("        >{}", reference);
 			}
 		}
+
+
+
+		/* added: quest stages */
+
+		if (!a_rule.requiredQuestStages.empty()) {
+			logger::info("");
+			logger::info("    This rule will only apply if at least one of these quest conditions is fulfilled:");
+			for (auto pair : a_rule.requiredQuestStages) {
+
+				auto & [wantedStage, comparator] = pair.second;
+
+				logger::info("        >Quest: {} ; Its Current Stage Must: {} {}",
+					pair.first->GetFormEditorID(),
+					Comparison::OperatorToString(pair.second.second),
+					wantedStage
+				);
+			}
+
+		}
+
+		/* end of add */
+
+
+
+
+		if (!a_rule.requiredGlobalValues.empty()) {
+			logger::info("");
+			logger::info("    This rule will only apply if these globals have these values:");
+			for (auto pair : a_rule.requiredGlobalValues) {
+				logger::info("        >Global: {}, Value: {}", pair.first->GetFormEditorID(), pair.second);
+			}
+		}
+		if (!a_rule.requiredAVs.empty()) {
+			logger::info("");
+			logger::info("    This rule will only apply while these actor values are all valid");
+			for (auto& pair : a_rule.requiredAVs) {
+				std::string valueName = "";
+				switch (pair.first) {
+				case RE::ActorValue::kIllusion:
+					valueName = "Illusion";
+					break;
+				case RE::ActorValue::kConjuration:
+					valueName = "Conjuration";
+					break;
+				case RE::ActorValue::kDestruction:
+					valueName = "Destruction";
+					break;
+				case RE::ActorValue::kRestoration:
+					valueName = "Restoration";
+					break;
+				case RE::ActorValue::kAlteration:
+					valueName = "Ateration";
+					break;
+				case RE::ActorValue::kEnchanting:
+					valueName = "Enchanting";
+					break;
+				case RE::ActorValue::kSmithing:
+					valueName = "Smithing";
+					break;
+				case RE::ActorValue::kHeavyArmor:
+					valueName = "Heavy Armor";
+					break;
+				case RE::ActorValue::kBlock:
+					valueName = "Block";
+					break;
+				case RE::ActorValue::kTwoHanded:
+					valueName = "Two Handed";
+					break;
+				case RE::ActorValue::kOneHanded:
+					valueName = "One Handed";
+					break;
+				case RE::ActorValue::kArchery:
+					valueName = "Archery";
+					break;
+				case RE::ActorValue::kLightArmor:
+					valueName = "Light Armor";
+					break;
+				case RE::ActorValue::kSneak:
+					valueName = "Sneak";
+					break;
+				case RE::ActorValue::kLockpicking:
+					valueName = "Lockpicking";
+					break;
+				case RE::ActorValue::kPickpocket:
+					valueName = "Pickpocket";
+					break;
+				case RE::ActorValue::kSpeech:
+					valueName = "Speech";
+					break;
+				default:
+					valueName = "Alchemy";
+					break;
+				}
+
+				logger::info("        >Value: {} -> Min Level: {}, Max Level: {}", valueName, 
+					pair.second.first, 
+					pair.second.second > -1.0f ? std::to_string(pair.second.second) : "MAX");
+			}
+		}
 		logger::info("-------------------------------------------------------------------------------------");
 	}
 
 	void ContainerManager::HandleContainer(RE::TESObjectREFR* a_ref) {
+#ifdef DEBUG
+		auto then = std::chrono::high_resolution_clock::now();
+		size_t rulesApplied = 0;
+#endif 
 		bool merchantContainer = a_ref->GetFactionOwner() ? a_ref->GetFactionOwner()->IsVendor() : false;
+		if (!merchantContainer) {
+			merchantContainer = MerchantCache::MerchantCache::GetSingleton()->IsMerchantContainer(a_ref);
+		}
 
+		auto* containerBase = a_ref->GetBaseObject() ? a_ref->GetBaseObject()->As<RE::TESObjectCONT>() : nullptr;
 		bool isContainerUnsafe = false;
-		auto* containerBase = a_ref->GetBaseObject()->As<RE::TESObjectCONT>();
 		if (containerBase && !(containerBase->data.flags & RE::CONT_DATA::Flag::kRespawn)) {
 			isContainerUnsafe = true;
 		}
@@ -280,33 +482,81 @@ namespace ContainerManager {
 		if (parentEncounterZone && parentEncounterZone->data.flags & RE::ENCOUNTER_ZONE_DATA::Flag::kNeverResets) {
 			isContainerUnsafe = true;
 		}
-
-		auto* containerItems = ContainerCache::CachedData::GetSingleton()->GetContainerItems(containerBase);
+		
+		auto inventoryCounts = a_ref->GetInventoryCounts();
 		for (auto& rule : this->replaceRules) {
 			if (merchantContainer && !rule.allowVendors) continue;
+			if (!merchantContainer && rule.onlyVendors) continue;
 			if (!rule.bypassSafeEdits && isContainerUnsafe) continue;
 			if (!IsRuleValid(&rule, a_ref)) continue;
 
 			if (rule.removeKeywords.empty()) {
+
 				auto itemCount = a_ref->GetInventoryCounts()[rule.oldForm];
 				if (itemCount < 1) continue;
 
 				a_ref->RemoveItem(rule.oldForm, itemCount, RE::ITEM_REMOVE_REASON::kRemove, nullptr, nullptr);
-				for (; itemCount > 0;) {
-					size_t rng = clib_util::RNG().Generate<size_t>(0, rule.newForm.size() - 1);
-					RE::TESBoundObject* thingToAdd = rule.newForm.at(rng);
-					if (thingToAdd->As<RE::TESLeveledList>()) {
-						AddLeveledListToContainer(thingToAdd->As<RE::TESLeveledList>(), a_ref);
+
+
+
+				/* added & changed:
+				
+					if pickAtRandom = 
+						> true  ,  distribute only one thing 
+						> false ,  distribute everything (default behavior)
+				*/
+
+				if (rule.isPickAtRandom) {
+
+					const int index = clib_util::RNG().Generate(0, (int) rule.newForm.size() - 1);
+
+					logger::info(">> start = 0, end = {}; end result = {}", rule.newForm.size() - 1, index);
+
+					if (index >= 0 && index < rule.newForm.size())
+					{
+						
+						auto obj = rule.newForm[index];
+
+						auto leveledThing = obj->As<RE::TESLeveledList>();
+						if (leveledThing) {
+#ifdef DEBUG
+							logger::debug("Adding leveled list to container:");
+#endif
+							AddLeveledListToContainer(leveledThing, a_ref, rule.count);
+						}
+						else {
+							a_ref->AddObjectToContainer(obj, nullptr, rule.count, nullptr);
+						}
 					}
-					else {
-						a_ref->AddObjectToContainer(thingToAdd, nullptr, 1, nullptr);
-					}
-					--itemCount;
 				}
+				else {
+					for (auto* obj : rule.newForm) {
+						auto leveledThing = obj->As<RE::TESLeveledList>();
+						if (leveledThing) {
+#ifdef DEBUG
+							logger::debug("Adding leveled list to container:");
+#endif
+							AddLeveledListToContainer(leveledThing, a_ref, rule.count);
+						}
+						else {
+							a_ref->AddObjectToContainer(obj, nullptr, rule.count, nullptr);
+						}
+					}
+
+				}
+
+				/* end of add & change */
+
+
+#ifdef DEBUG
+
+				rulesApplied++;
+#endif
 			}
 			else {
 				uint32_t itemCount = 0;
-				for (auto* item : *containerItems) {
+				for (auto& pair : inventoryCounts) {
+					auto* item = pair.first;
 					bool missingKeyword = false;
 					for (auto it = rule.removeKeywords.begin(); it != rule.removeKeywords.end() && !missingKeyword; ++it) {
 						if (item->HasKeywordByEditorID(*it)) continue;
@@ -314,28 +564,31 @@ namespace ContainerManager {
 					}
 					if (missingKeyword) continue;
 
-					auto oldItemCount = a_ref->GetInventoryCounts()[rule.oldForm];
-					if (oldItemCount < 1) continue;
-					itemCount += oldItemCount;
-					a_ref->RemoveItem(item, oldItemCount, RE::ITEM_REMOVE_REASON::kRemove, nullptr, nullptr);
+					itemCount += pair.second;
+					a_ref->RemoveItem(item, pair.second, RE::ITEM_REMOVE_REASON::kRemove, nullptr, nullptr);
 				}
 
-				for (uint32_t i = 0; i < itemCount; ++i) {
-					size_t rng = clib_util::RNG().Generate<size_t>(0, rule.newForm.size() - 1);
-					RE::TESBoundObject* thingToAdd = rule.newForm.at(rng);
+				for (auto* thingToAdd : rule.newForm) {
 					auto* leveledThing = thingToAdd->As<RE::TESLeveledList>();
 					if (leveledThing) {
-						AddLeveledListToContainer(leveledThing, a_ref);
+#ifdef DEBUG
+						logger::debug("Adding leveled list to container:");
+#endif
+						AddLeveledListToContainer(leveledThing, a_ref, itemCount);
 					}
 					else {
 						a_ref->AddObjectToContainer(thingToAdd, nullptr, itemCount, nullptr);
 					}
 				}
+#ifdef DEBUG
+				rulesApplied++;
+#endif
 			}
 		} //Replace Rule reading end.
 
 		for (auto& rule : this->removeRules) {
 			if (merchantContainer && !rule.allowVendors) continue;
+			if (!merchantContainer && rule.onlyVendors) continue;
 			if (!rule.bypassSafeEdits && isContainerUnsafe) continue;
 			int32_t ruleCount = rule.count;
 
@@ -348,12 +601,13 @@ namespace ContainerManager {
 					ruleCount = itemCount;
 				}
 				a_ref->RemoveItem(rule.oldForm, ruleCount, RE::ITEM_REMOVE_REASON::kRemove, nullptr, nullptr);
+#ifdef DEBUG
+				rulesApplied++;
+#endif
 			}
 			else {
-				auto* container = a_ref->GetContainer();
-				if (!container) continue;
-
-				for (auto* item : *containerItems) {
+				for (auto& pair : inventoryCounts) {
+					auto* item = pair.first;
 					bool missingKeyword = false;
 					for (auto it = rule.removeKeywords.begin(); it != rule.removeKeywords.end() && !missingKeyword; ++it) {
 						if (item->HasKeywordByEditorID(*it)) continue;
@@ -361,15 +615,17 @@ namespace ContainerManager {
 					}
 					if (missingKeyword) continue;
 
-					auto oldItemCount = a_ref->GetInventoryCounts()[item];
-					if (oldItemCount < 1) continue;
-					a_ref->RemoveItem(item, oldItemCount, RE::ITEM_REMOVE_REASON::kRemove, nullptr, nullptr);
+					a_ref->RemoveItem(item, pair.second, RE::ITEM_REMOVE_REASON::kRemove, nullptr, nullptr);
 				}
+#ifdef DEBUG
+				rulesApplied++;
+#endif
 			}
 		} //Remove rule reading end.
 
 		for (auto& rule : this->addRules) {
 			if (merchantContainer && !rule.allowVendors) continue;
+			if (!merchantContainer && rule.onlyVendors) continue;
 			if (!rule.bypassSafeEdits && isContainerUnsafe) continue;
 			if (!IsRuleValid(&rule, a_ref)) continue;
 			int32_t ruleCount = rule.count;
@@ -377,20 +633,62 @@ namespace ContainerManager {
 				ruleCount = 1;
 			}
 
-			for (; ruleCount > 0;) {
-				size_t rng = clib_util::RNG().Generate<size_t>(0, rule.newForm.size() - 1);
-				RE::TESBoundObject* thingToAdd = rule.newForm.at(rng);
-				auto* leveledThing = thingToAdd->As<RE::TESLeveledList>();
 
-				if (leveledThing) {
-					AddLeveledListToContainer(leveledThing, a_ref);
+				/* added & changed:
+				
+					if pickAtRandom = 
+						> true  ,  distribute only one thing 
+						> false ,  distribute everything (default behavior)
+				*/
+
+				if (rule.isPickAtRandom) {
+
+					const int index = clib_util::RNG().Generate(0, (int) rule.newForm.size() - 1);
+
+					if (index >= 0 && index < rule.newForm.size())
+					{
+						
+						auto obj = rule.newForm[index];
+
+						auto leveledThing = obj->As<RE::TESLeveledList>();
+						if (leveledThing) {
+#ifdef DEBUG
+							logger::debug("Adding leveled list to container:");
+#endif
+							AddLeveledListToContainer(leveledThing, a_ref, rule.count);
+						}
+						else {
+							a_ref->AddObjectToContainer(obj, nullptr, rule.count, nullptr);
+						}
+					}
 				}
 				else {
-					a_ref->AddObjectToContainer(thingToAdd, nullptr, 1, nullptr);
+
+					for (auto* obj : rule.newForm) {
+						auto leveledThing = obj->As<RE::TESLeveledList>();
+						if (leveledThing) {
+		#ifdef DEBUG
+							logger::debug("Adding leveled list to container:");
+		#endif
+							AddLeveledListToContainer(leveledThing, a_ref, ruleCount);
+						}
+						else {
+							a_ref->AddObjectToContainer(obj, nullptr, rule.count, nullptr);
+						}
+					}
 				}
-				--ruleCount;
-			}
+#ifdef DEBUG
+			rulesApplied++;
+#endif
 		} //Add rule reading end.
+
+#ifdef DEBUG
+		auto now = std::chrono::high_resolution_clock::now();
+		auto elapsed = std::chrono::duration_cast<std::chrono::nanoseconds>(now - then).count();
+		if (rulesApplied > 0) {
+			logger::debug("Finished processing container: {}.\n    Applied {} rules in {} nanoseconds.", containerBase->GetFormEditorID(), rulesApplied, elapsed);
+		}
+#endif
 	}
 
 	void ContainerManager::InitializeData() {
@@ -426,6 +724,14 @@ namespace ContainerManager {
 	}
 
 	void ContainerManager::ContainerManager::SetMaxLookupRange(float a_range) {
+		if (a_range < 2500.0f) {
+			a_range = 2500.0f;
+		}
+		else if (a_range > 50000.0f) {
+			a_range = 50000.0f;
+		}
+
 		this->fMaxLookupRadius = a_range;
 	}
+
 }
