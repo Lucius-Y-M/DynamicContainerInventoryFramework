@@ -5,3 +5,8 @@ extern/
 cmake/
 include/json/
 CMakeUserPresets.json
+DynamicContainerInventoryFramework.code-workspace
+include/containerCache.DISABLE_h
+include/containerManager_ORIG.DISABLE_h
+src/containerCache.DISABLE_cpp
+src/containerManager_ORIG.DISABLE_cpp
