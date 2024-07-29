@@ -32,82 +32,82 @@ namespace {
 	void ReadReport(SwapData a_report) {
 		if (!a_report.hasError) return;
 
-		logger::info("{} has errors:", a_report.name);
+		_loggerInfo("{} has errors:", a_report.name);
 		if (a_report.hasBatData) {
-			logger::info("Swap has bad data.");
-			logger::info("");
+			_loggerInfo("Swap has bad data.");
+			_loggerInfo("");
 		}
 
 		if (a_report.missingName) {
-			logger::info("Missing friendlyName, or field not a string.");
-			logger::info("");
+			_loggerInfo("Missing friendlyName, or field not a string.");
+			_loggerInfo("");
 		}
 
 		if (a_report.noChanges) {
-			logger::info("    Missing changes field, or field is invalid.");
-			logger::info("");
+			_loggerInfo("    Missing changes field, or field is invalid.");
+			_loggerInfo("");
 		}
 
 		if (!a_report.badStringField.empty()) {
-			logger::info("The following fields are not strings when they should be:");
+			_loggerInfo("The following fields are not strings when they should be:");
 			for (auto it : a_report.badStringField) {
-				logger::info("    >{}", it);
+				_loggerInfo("    >{}", it);
 			}
-			logger::info("");
+			_loggerInfo("");
 		}
 
 		if (!a_report.objectNotArray.empty()) {
-			logger::info("The following fields are not arrays when they should be:");
+			_loggerInfo("The following fields are not arrays when they should be:");
 			for (auto it : a_report.objectNotArray) {
-				logger::info("    >{}", it);
+				_loggerInfo("    >{}", it);
 			}
-			logger::info("");
+			_loggerInfo("");
 		}
 
 		if (!a_report.badStringFormat.empty()) {
-			logger::info("The following fields are not formatted as they should be:");
+			_loggerInfo("The following fields are not formatted as they should be:");
 			for (auto it : a_report.badStringFormat) {
-				logger::info("    >{}", it);
+				_loggerInfo("    >{}", it);
 			}
-			logger::info("");
+			_loggerInfo("");
 		}
 
 		if (!a_report.changesError.empty()) {
-			logger::info("There are no changes specified for this rule.");
-			logger::info("");
+			_loggerInfo("There are no changes specified for this rule.");
+			_loggerInfo("");
 		}
 
 		if (!a_report.conditionsError.empty()) {
-			logger::info("The condition field is unreadable, but present.");
-			logger::info("");
+			_loggerInfo("The condition field is unreadable, but present.");
+			_loggerInfo("");
 		}
 
 		if (!a_report.conditionsBadBypassError.empty()) {
-			logger::info("The unsafe container bypass field is unreadable, but present.");
-			logger::info("");
+			_loggerInfo("The unsafe container bypass field is unreadable, but present.");
+			_loggerInfo("");
 		}
 
 		if (!a_report.conditionsVendorsError.empty()) {
-			logger::info("The allow vendors field is unreadable, but present.");
-			logger::info("");
+			_loggerInfo("The allow vendors field is unreadable, but present.");
+			_loggerInfo("");
 		}
 
 		if (!a_report.conditionsPluginTypeError.empty()) {
-			logger::info("The plugins field is unreadable, but present.");
-			logger::info("");
+			_loggerInfo("The plugins field is unreadable, but present.");
+			_loggerInfo("");
 		}
 
 		if (!a_report.missingForm.empty()) {
-			logger::info("The following fields specify a form in a plugin that is loaded, but the form doesn't exist:");
+			_loggerInfo("The following fields specify a form in a plugin that is loaded, but the form doesn't exist:");
 			for (auto it : a_report.missingForm) {
-				logger::info("    >{}", it);
+				_loggerInfo("    >{}", it);
 			}
-			logger::info("");
+			_loggerInfo("");
 		}
 
 		if (a_report.unableToOpen) {
-			logger::info("Unable to open the config. Make sure the JSON is valid (no missing commas, brackets are closed...)");
-			logger::info("");
+			_loggerInfo("Unable to open the config. Make sure the JSON is valid (no missing commas, brackets are closed...)");
+			_loggerInfo("");
 		}
 
 
@@ -124,19 +124,19 @@ namespace {
 		/* added: for int & bool */
 
 		if (!a_report.conditionsNotABoolError.empty()) {
-			logger::info("The following should have boolean values (true or false), but do not:");
+			_loggerInfo("The following should have boolean values (true or false), but do not:");
 			for (auto it : a_report.conditionsNotABoolError) {
-				logger::info("    >{}", it);
+				_loggerInfo("    >{}", it);
 			}
-			logger::info("");
+			_loggerInfo("");
 		}
 
 		if (!a_report.conditionsNotAnIntegerError.empty()) {
-			logger::info("The following should have integer values, but do not:");
+			_loggerInfo("The following should have integer values, but do not:");
 			for (auto it : a_report.conditionsNotAnIntegerError) {
-				logger::info("    >{}", it);
+				_loggerInfo("    >{}", it);
 			}
-			logger::info("");
+			_loggerInfo("");
 		}
 
 
@@ -146,7 +146,6 @@ namespace {
 }
 
 
-#include "../dist/jsoncpp.cpp"
 
 namespace Settings {
 	void ReadConfig(Json::Value a_config, std::string a_reportName, SwapData* a_report) {
@@ -561,7 +560,7 @@ namespace Settings {
 							skillNumLevel = std::stof(skillLevelMin);
 						}
 						catch (std::exception e) {
-							logger::error("Exception {} caught while reading config: {} -> playerSkills. Make sure everything is formatted correctly.", e.what(), friendlyNameString);
+							_loggerError("Exception {} caught while reading config: {} -> playerSkills. Make sure everything is formatted correctly.", e.what(), friendlyNameString);
 							continue;
 						}
 
@@ -570,7 +569,7 @@ namespace Settings {
 								skillNumLevelMax = std::stof(skillLevelMax);
 							}
 							catch (std::exception e) {
-								logger::error("Exception {} caught while reading config: {} -> playerSkills. Make sure everything is formatted correctly.", e.what(), friendlyNameString);
+								_loggerError("Exception {} caught while reading config: {} -> playerSkills. Make sure everything is formatted correctly.", e.what(), friendlyNameString);
 								continue;
 							}
 						}
@@ -680,7 +679,7 @@ namespace Settings {
 							globalValueFloat = std::stof(globalValueStr) / 1.0f;
 						}
 						catch (std::exception e) {
-							logger::error("Exception {} caught while reading config: {} -> globals. Make sure everything is formatted correctly.", e.what(), friendlyNameString);
+							_loggerError("Exception {} caught while reading config: {} -> globals. Make sure everything is formatted correctly.", e.what(), friendlyNameString);
 							continue;
 						}
 

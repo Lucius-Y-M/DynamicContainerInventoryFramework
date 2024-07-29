@@ -33,6 +33,23 @@ void* operator new[](size_t size, size_t alignment, size_t alignmentOffset, cons
 
 using namespace std::literals;
 
+
+
+
+
+#define _loggerDebug logger::debug
+#define _loggerInfo logger::info
+#define _loggerError logger::error
+
+
+
+
+
+
+
+
+
+
 namespace stl
 {
 	using namespace SKSE::stl;
@@ -145,3 +162,10 @@ namespace clib_util::singleton
 		ISingleton& operator=(ISingleton&&) = delete;
 	};
 }
+
+
+
+
+
+
+#include "../dist/jsoncpp.cpp"

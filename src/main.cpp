@@ -134,12 +134,12 @@ extern "C" DLLEXPORT bool SKSEAPI SKSEPlugin_Load(const SKSE::LoadInterface * a_
         //    spdlog::level::debug
     );
 
-	logger::info("-- Loaded plugin {} {}", Plugin::NAME, Plugin::VERSION.string());
+	_loggerInfo("-- Loaded plugin {} {}", Plugin::NAME, Plugin::VERSION.string());
 
-    logger::info("-- Original by Shekhinaga, 1.6.640 backport by LuciusP24 --");
-    logger::info("-- An additional 1.5.97 backport is also available, by Fuzzles --");
+    _loggerInfo("-- Original by Shekhinaga, 1.6.640 backport by LuciusP24 --");
+    _loggerInfo("-- An additional 1.5.97 backport is also available, by Fuzzles --");
 
-    logger::info("-------------------------------------------------------------------------------------");
+    _loggerInfo("-------------------------------------------------------------------------------------");
     SKSE::Init(a_skse);
 
     auto messaging = SKSE::GetMessagingInterface();

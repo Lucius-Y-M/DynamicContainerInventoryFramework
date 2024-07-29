@@ -34,14 +34,14 @@ namespace Utility {
 		if (!parent) return;
 
 		if (std::find(a_parentArray->begin(), a_parentArray->end(), parent) != a_parentArray->end()) {
-			logger::error("IMPORTANT - Recursive parent locations. Consider fixing this.");
-			logger::error("Chain:");
+			_loggerError("IMPORTANT - Recursive parent locations. Consider fixing this.");
+			_loggerError("Chain:");
 			for (auto* location : *a_parentArray) {
-				logger::error("    {} ->", location->GetName());
+				_loggerError("    {} ->", location->GetName());
 			}
 			return;
 		}
-		//logger::infonfo("    >{}", clib_util::editorID::get_editorID(parent));
+		//_loggerInfonfo("    >{}", clib_util::editorID::get_editorID(parent));
 		a_parentArray->push_back(parent);
 		return GetParentChain(parent, a_parentArray);
 	}
@@ -55,12 +55,12 @@ namespace Utility {
 			auto* leveledForm = form->As<RE::TESLeveledList>();
 			if (leveledForm) {
 #ifdef DEBUG
-				logger::debug("    >Sublist found, resolving that...");
+				_loggerDebug("    >Sublist found, resolving that...");
 #endif
 				ResolveLeveledList(leveledForm, a_result, it.count);
 			}
 			else {
-				logger::debug("    >Resolved: {} -> {}", it.form->GetFormEditorID(), it.count);
+				_loggerDebug("    >Resolved: {} -> {}", it.form->GetFormEditorID(), it.count);
 				a_result->push_back(it);
 			}
 		}
