@@ -1,14 +1,11 @@
-#pragma once
-
-
 #include "hooks.h"
 #include "containerManager.h"
 
 namespace Hooks {
 	bool TESObjectReference_Initialize::Install()
 	{
-		REL::Relocation<std::uintptr_t> target{ REL::ID(19507) };
-		stl::write_thunk_call<TESObjectReference_Initialize>(target.address() + 0x78C);
+		REL::Relocation<std::uintptr_t> target{ REL::ID(19507), 0x78C };
+		stl::write_thunk_call<TESObjectReference_Initialize>(target.address());
 		return true;
 	}
 
@@ -17,15 +14,14 @@ namespace Hooks {
 		func(a_container, a_keepChanges);
 
 		if (a_container->GetBaseObject() && a_container->GetBaseObject()->As<RE::TESObjectCONT>()) {
-			
 			ContainerManager::ContainerManager::GetSingleton()->HandleContainer(a_container);
 		}
 	}
 
 	bool TESObjectReference_Reset::Install()
 	{
-		REL::Relocation<std::uintptr_t> target{ REL::ID(19802) };
-		stl::write_thunk_call<TESObjectReference_Reset>(target.address() + 0x12B);
+		REL::Relocation<std::uintptr_t> target{ REL::ID(19802), 0x12B };
+		stl::write_thunk_call<TESObjectReference_Reset>(target.address());
 		return true;
 	}
 
@@ -34,7 +30,6 @@ namespace Hooks {
 		func(a_container, a_keepChanges);
 
 		if (a_container->GetBaseObject() && a_container->GetBaseObject()->As<RE::TESObjectCONT>()) {
-
 			ContainerManager::ContainerManager::GetSingleton()->HandleContainer(a_container);
 		}
 	}

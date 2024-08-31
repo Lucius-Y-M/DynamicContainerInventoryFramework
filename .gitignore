@@ -51,3 +51,4 @@ CMakeUserPresets.json.template
 
 README.md
 vcpkg.json
+src/setting.NEW_cpp

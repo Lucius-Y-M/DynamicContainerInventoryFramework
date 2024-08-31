@@ -1,7 +1,5 @@
 #pragma once
 
-
-
 namespace Hooks {
 	struct TESObjectReference_Initialize
 	{

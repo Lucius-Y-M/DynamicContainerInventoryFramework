@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.21)
 
 project(
 	ContainerDistributionFramework
-	VERSION 0.7.5
+	VERSION 2.2.1
 	LANGUAGES CXX
 )
 
